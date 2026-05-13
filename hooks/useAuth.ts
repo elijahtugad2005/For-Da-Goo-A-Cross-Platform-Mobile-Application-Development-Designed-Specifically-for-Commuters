@@ -1,25 +1,25 @@
 import { auth, database, firestore } from '@/config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
-  createUserWithEmailAndPassword,
-  EmailAuthProvider,
-  User as FirebaseUser,
-  GoogleAuthProvider,
-  linkWithCredential,
-  linkWithPopup,
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithCredential,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile
+    createUserWithEmailAndPassword,
+    EmailAuthProvider,
+    User as FirebaseUser,
+    GoogleAuthProvider,
+    linkWithCredential,
+    linkWithPopup,
+    onAuthStateChanged,
+    signInAnonymously,
+    signInWithCredential,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+    updateProfile
 } from 'firebase/auth';
 import { ref, remove } from 'firebase/database';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-export type UserRole = 'student' | 'driver';
+export type UserRole = 'student' | 'driver' | 'admin';
 
 export interface User {
   uid: string;

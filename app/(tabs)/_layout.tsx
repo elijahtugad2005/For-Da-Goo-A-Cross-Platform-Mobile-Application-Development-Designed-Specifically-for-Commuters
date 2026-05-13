@@ -23,7 +23,12 @@ export default function TabLayout() {
     return <Redirect href="/auth" />;
   }
 
-  // 3. If user IS logged in, show the tab bar with custom design
+  // 3. If user is an admin, redirect to admin panel
+  if (user.role === 'admin') {
+    return <Redirect href="/(admin)/" />;
+  }
+
+  // 4. If user IS logged in (student or driver), show the tab bar with custom design
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
