@@ -75,107 +75,114 @@ export default function ExploreScreen() {
 
       {/* COMPACT TOP BAR WITH NAVIGATION */}
       <View style={styles.topBar}>
-        {/* DROPDOWN */}
-        <View style={styles.dropdownWrapper}>
-          <TouchableOpacity 
-            style={styles.dropdownHeader} 
-            onPress={() => setIsDropdownOpen(!isDropdownOpen)}
-          >
-            <ThemedText style={styles.chevron}>
-              {isDropdownOpen ? "▲" : "▼"}
-            </ThemedText>
-          </TouchableOpacity>
+        {/* ROW 1: Logo + Nav + Controls */}
+        <View style={styles.topBarRow}>
+          {/* DROPDOWN */}
+          <View style={styles.dropdownWrapper}>
+            <TouchableOpacity 
+              style={styles.dropdownHeader} 
+              onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+              <ThemedText style={styles.chevron}>
+                {isDropdownOpen ? "▲" : "▼"}
+              </ThemedText>
+            </TouchableOpacity>
 
-          {isDropdownOpen && (
-            <View style={styles.dropdownList}>
-              {menuOptions.map((option) => (
-                <TouchableOpacity 
-                  key={option.label} 
-                  style={[
-                    styles.dropdownItem, 
-                    selectedRoute === option.label && styles.dropdownItemActive
-                  ]}
-                  onPress={() => {
-                    if (option.type === "route") setSelectedRoute(option.label);
-                    else if (option.label === "Toggle Boundary") setShowBoundary(!showBoundary);
-                    setIsDropdownOpen(false);
-                  }}
-                >
-                  <ThemedText style={[
-                    styles.dropdownItemText, 
-                    selectedRoute === option.label && styles.dropdownItemTextActive
-                  ]}>
-                    {option.label === "Toggle Boundary" 
-                      ? (showBoundary ? "Hide Boundary" : "Show Boundary") 
-                      : option.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* HEADER INFO */}
-        <View style={styles.headerCard}>
-          <Image 
-            source={require('@/assets/images/fordagoo.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <View style={styles.headerTextContainer}>
-            <ThemedText style={styles.titleText}>ForDaGoo Tracker</ThemedText>
-            <View style={styles.statusContainer}>
-              <View style={styles.statusItem}>
-                <View style={[styles.statusDot, styles.activeDot]} />
-                <ThemedText style={styles.statusText}>{activeCount} Active</ThemedText>
+            {isDropdownOpen && (
+              <View style={styles.dropdownList}>
+                {menuOptions.map((option) => (
+                  <TouchableOpacity 
+                    key={option.label} 
+                    style={[
+                      styles.dropdownItem, 
+                      selectedRoute === option.label && styles.dropdownItemActive
+                    ]}
+                    onPress={() => {
+                      if (option.type === "route") setSelectedRoute(option.label);
+                      else if (option.label === "Toggle Boundary") setShowBoundary(!showBoundary);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <ThemedText style={[
+                      styles.dropdownItemText, 
+                      selectedRoute === option.label && styles.dropdownItemTextActive
+                    ]}>
+                      {option.label === "Toggle Boundary" 
+                        ? (showBoundary ? "Hide Boundary" : "Show Boundary") 
+                        : option.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <View style={styles.statusItem}>
-                <View style={[styles.statusDot, styles.onlineDot]} />
-                <ThemedText style={styles.statusText}>{onlineCount} Online</ThemedText>
+            )}
+          </View>
+
+          {/* LOGO + TITLE */}
+          <View style={styles.logoRow}>
+            <Image 
+              source={require('@/assets/images/fordagoo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View>
+              <ThemedText style={styles.titleText}>ForDaGoo</ThemedText>
+              <View style={styles.statusContainer}>
+                <View style={styles.statusItem}>
+                  <View style={[styles.statusDot, styles.activeDot]} />
+                  <ThemedText style={styles.headerStatusText}>{activeCount} Active</ThemedText>
+                </View>
+                <View style={styles.statusItem}>
+                  <View style={[styles.statusDot, styles.onlineDot]} />
+                  <ThemedText style={styles.headerStatusText}>{onlineCount} Online</ThemedText>
+                </View>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* NAVIGATION TABS */}
-        <View style={styles.navTabs}>
-          <TouchableOpacity 
-            style={[styles.navTab, pathname.includes('explore') && styles.navTabActive]}
-            onPress={() => router.push('/(tabs)/explore')}
-          >
-            <LocationIcon size={16} color={pathname.includes('explore') ? '#F56476' : '#8E8E93'} />
-            <ThemedText style={[styles.navTabText, pathname.includes('explore') && styles.navTabTextActive]}>
-              Tracking
+          {/* SPACER */}
+          <View style={styles.spacer} />
+
+          {/* NAVIGATION TABS */}
+          <View style={styles.navTabs}>
+            <TouchableOpacity 
+              style={[styles.navTab, pathname.includes('explore') && styles.navTabActive]}
+              onPress={() => router.push('/(tabs)/explore')}
+            >
+              <LocationIcon size={14} color={pathname.includes('explore') ? '#F56476' : '#8E8E93'} />
+              <ThemedText style={[styles.navTabText, pathname.includes('explore') && styles.navTabTextActive]}>
+                Tracking
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.navTab, pathname.includes('profile') && styles.navTabActive]}
+              onPress={() => router.push('/(tabs)/profile')}
+            >
+              <ProfileIcon size={14} color={pathname.includes('profile') ? '#F56476' : '#8E8E93'} />
+              <ThemedText style={[styles.navTabText, pathname.includes('profile') && styles.navTabTextActive]}>
+                Profile
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* CONTROL BUTTON + STATUS */}
+          {user?.role === 'driver' && !user?.isAnonymous && (
+            <TouchableOpacity 
+              style={[styles.compactButton, isSharing && styles.compactButtonActive]}
+              onPress={handleTrackLocation}
+              activeOpacity={0.8}
+            >
+              <ThemedText style={styles.compactButtonText}>
+                {isSharing ? '⏹ Stop' : '▶ Start'}
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.statusBadge}>
+            <ThemedText style={[styles.badgeStatusText, isSharing && styles.badgeStatusTextActive]}>
+              {isSharing ? '● Live' : '○ Offline'}
             </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.navTab, pathname.includes('profile') && styles.navTabActive]}
-            onPress={() => router.push('/(tabs)/profile')}
-          >
-            <ProfileIcon size={16} color={pathname.includes('profile') ? '#F56476' : '#8E8E93'} />
-            <ThemedText style={[styles.navTabText, pathname.includes('profile') && styles.navTabTextActive]}>
-              Profile
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* COMPACT CONTROL BUTTON */}
-        <TouchableOpacity 
-          style={[styles.compactButton, isSharing && styles.compactButtonActive]}
-          onPress={handleTrackLocation}
-          activeOpacity={0.8}
-        >
-          <ThemedText style={styles.compactButtonText}>
-            {isSharing ? '⏹ Stop' : '▶ Start'}
-          </ThemedText>
-        </TouchableOpacity>
-
-        {/* STATUS INDICATOR */}
-        <View style={styles.statusBadge}>
-          <ThemedText style={[styles.statusText, isSharing && styles.statusTextActive]}>
-            {isSharing ? '● Live' : '○ Offline'}
-          </ThemedText>
+          </View>
         </View>
       </View>
 
@@ -229,28 +236,42 @@ const styles = StyleSheet.create({
   },
   topBar: {
     position: 'absolute',
-    top: 15,
-    left: 15,
-    right: 15,
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 20,
+  },
+  topBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    zIndex: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+  },
+  spacer: {
+    flex: 1,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   dropdownWrapper: {
     zIndex: 30,
   },
   dropdownHeader: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   chevron: {
     color: '#007AFF',
@@ -286,31 +307,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  headerCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
   logo: {
-    width: 32,
-    height: 32,
-  },
-  headerTextContainer: {
-    flex: 1,
+    width: 28,
+    height: 28,
   },
   titleText: { 
-    fontSize: 14, 
+    fontSize: 13, 
     fontWeight: '700', 
-    color: '#1C1C1E' 
+    color: '#1C1C1E',
+    lineHeight: 16,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -333,7 +338,7 @@ const styles = StyleSheet.create({
   onlineDot: {
     backgroundColor: '#007AFF', // Blue for online (in app but not sharing)
   },
-  statusText: {
+  headerStatusText: {
     fontSize: 11,
     color: '#8E8E93',
     fontWeight: '500',
@@ -345,13 +350,9 @@ const styles = StyleSheet.create({
   },
   compactButton: {
     backgroundColor: '#F56476',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   compactButtonActive: {
     backgroundColor: '#34A853',
@@ -362,21 +363,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   statusBadge: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  statusText: {
+  badgeStatusText: {
     fontSize: 12,
     color: '#8E8E93',
     fontWeight: '600',
   },
-  statusTextActive: {
+  badgeStatusTextActive: {
     color: '#34A853',
   },
   navTabs: {

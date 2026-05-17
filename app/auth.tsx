@@ -3,19 +3,22 @@ import { ThemedText } from '@/components/themed-text';
 import { Toast } from '@/components/toast';
 import { useAuth, UserRole } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AuthScreen() {
-  const { signUpWithEmail, signInWithEmail, signInAnonymous, signInWithGoogle } = useAuth();
+  const { user, signUpWithEmail, signInWithEmail, signInAnonymous, signInWithGoogle, resendEmailVerification } = useAuth();
+  const [showEmailVerificationPrompt, setShowEmailVerificationPrompt] = useState(false);
   const router = useRouter();
   
   const [isLogin, setIsLogin] = useState(true);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [pendingAuth, setPendingAuth] = useState<'anonymous' | 'google' | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [loading, setLoading] = useState(false);
-  
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend email verification
+
   // Toast state
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -36,13 +39,40 @@ export default function AuthScreen() {
     setToastVisible(true);
   };
 
+  const passwordCriteria = {
+    minLength: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+  const isPasswordStrong = Object.values(passwordCriteria).every(Boolean);
+
   const handleAuth = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!trimmedEmail || !password) {
       showToast("Please fill in all fields");
       return;
     }
 
-    // Only check agreement during sign-up
+    if (!emailRegex.test(trimmedEmail)) {
+      showToast("Please enter a valid email address");
+      return;
+    }
+
+    if (!isLogin && !trimmedName) {
+      showToast("Please enter your name");
+      return;
+    }
+
+    if (!isLogin && !isPasswordStrong) {
+      showToast("Password must include uppercase, lowercase, number, and special character");
+      return;
+    }
+
     if (!isLogin && !hasAgreed) {
       showToast("Please accept the Terms & Privacy Policy");
       return;
@@ -53,44 +83,44 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!isLogin && !name) {
-      showToast("Please enter your name");
-      return;
-    }
-
     setLoading(true);
 
     if (isLogin) {
-      // Sign in with email
-      const result = await signInWithEmail(email, password);
+      // Sign in with email — use fresh emailVerified from the credential
+      const result = await signInWithEmail(trimmedEmail, password);
       if (result.success) {
-        showToast("Login successful!", 'success');
-        setTimeout(() => router.replace('/(tabs)/explore'), 500);
+        if (!result.emailVerified) {
+          showToast("Please verify your email address to continue.", 'info');
+          setShowEmailVerificationPrompt(true);
+        } else {
+          showToast("Login successful!", 'success');
+          setTimeout(() => router.replace('/(tabs)/explore'), 500);
+        }
       } else {
-        // Parse Firebase error messages
-        let errorMessage = "Invalid username or password";
+        let errorMessage = "Invalid email or password";
         if (result.error?.includes('user-not-found')) {
-          errorMessage = "No account found with this username";
+          errorMessage = "No account found with this email";
         } else if (result.error?.includes('wrong-password')) {
           errorMessage = "Incorrect password";
         } else if (result.error?.includes('invalid-credential')) {
-          errorMessage = "Invalid username or password";
+          errorMessage = "Invalid email or password";
+        } else if (result.error?.includes('too-many-requests')) {
+          errorMessage = "Too many failed attempts. Please try again later.";
         }
         showToast(errorMessage);
       }
     } else {
       // Sign up with email
-      const result = await signUpWithEmail(email, password, selectedRole, name);
+      const result = await signUpWithEmail(trimmedEmail, password, selectedRole, trimmedName);
       if (result.success) {
-        showToast("Account created successfully!", 'success');
-        setTimeout(() => router.replace('/(tabs)/explore'), 500);
+        showToast("Account created successfully! Please verify your email.", 'success');
+        setIsLogin(true); // Switch to login view after signup
       } else {
-        // Parse Firebase error messages
         let errorMessage = "Sign up failed";
         if (result.error?.includes('email-already-in-use')) {
-          errorMessage = "Username already taken";
+          errorMessage = "This email is already registered";
         } else if (result.error?.includes('weak-password')) {
-          errorMessage = "Password should be at least 6 characters";
+          errorMessage = "Password is too weak";
         }
         showToast(errorMessage);
       }
@@ -100,20 +130,53 @@ export default function AuthScreen() {
   };
 
   const handleAnonymousLogin = async () => {
+    // Immediate anonymous sign-in (no Terms check) — restored original behavior
     setLoading(true);
     const result = await signInAnonymous(selectedRole);
-    
+
     if (result.success) {
       showToast("Signed in as guest", 'success');
       setTimeout(() => router.replace('/(tabs)/explore'), 500);
     } else {
       showToast(result.error || "Anonymous sign-in failed");
     }
-    
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => {
+        setResendCooldown(prev => prev - 1);
+      }, 1000);
+    } 
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) {
+      showToast(`Please wait ${resendCooldown} seconds before resending.`, 'info');
+      return;
+    }
+    setLoading(true);
+    const result = await resendEmailVerification();
+    if (result.success) {
+      showToast("Verification email sent! Please check your inbox.", "success");
+      setResendCooldown(60); // Start 60-second cooldown
+    } else {
+      showToast(result.error || "Failed to send verification email.");
+    }
     setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
+    if (!hasAgreed) {
+      setPendingAuth('google');
+      setShowTerms(true);
+      return;
+    }
+
     setLoading(true);
     const result = await signInWithGoogle(selectedRole);
     
@@ -184,7 +247,7 @@ export default function AuthScreen() {
 
         <TextInput 
           style={styles.input} 
-          placeholder="Username" 
+          placeholder="Email Address" 
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -209,6 +272,26 @@ export default function AuthScreen() {
             <EyeIcon size={20} color="#8E8E93" closed={!showPassword} />
           </TouchableOpacity>
         </View>
+
+        {!isLogin && (
+          <View style={styles.passwordHintContainer}>
+            <ThemedText style={[styles.passwordHint, passwordCriteria.minLength ? styles.passwordHintValid : styles.passwordHintInvalid]}>
+              • At least 8 characters
+            </ThemedText>
+            <ThemedText style={[styles.passwordHint, passwordCriteria.uppercase ? styles.passwordHintValid : styles.passwordHintInvalid]}>
+              • One uppercase letter
+            </ThemedText>
+            <ThemedText style={[styles.passwordHint, passwordCriteria.lowercase ? styles.passwordHintValid : styles.passwordHintInvalid]}>
+              • One lowercase letter
+            </ThemedText>
+            <ThemedText style={[styles.passwordHint, passwordCriteria.number ? styles.passwordHintValid : styles.passwordHintInvalid]}>
+              • One number
+            </ThemedText>
+            <ThemedText style={[styles.passwordHint, passwordCriteria.special ? styles.passwordHintValid : styles.passwordHintInvalid]}>
+              • One special character
+            </ThemedText>
+          </View>
+        )}
 
         {!isLogin && (
           <View style={styles.passwordContainer}>
@@ -248,25 +331,42 @@ export default function AuthScreen() {
           </ThemedText>
         </TouchableOpacity>
 
+        {showEmailVerificationPrompt && (
+          <View style={styles.emailVerificationPrompt}>
+            <ThemedText style={styles.emailVerificationText}>
+              Your email is not verified. Please check your inbox for a verification link.
+            </ThemedText>
+            <TouchableOpacity 
+              style={[styles.resendBtn, (loading || resendCooldown > 0) && styles.resendBtnDisabled]}
+              onPress={handleResendVerification} 
+              disabled={loading || resendCooldown > 0}
+            >
+              <ThemedText style={styles.resendBtnText}>
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Verification Email"}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Alternative Login Methods - Row Layout */}
         <View style={styles.alternativeAuthRow}>
-          {/* Anonymous Login Button */}
-          <TouchableOpacity 
-            style={[styles.btnAlt, styles.btnSecondary]} 
-            onPress={handleAnonymousLogin}
-            disabled={loading}
-          >
-            <ThemedText style={styles.btnSecondaryText}>Guest</ThemedText>
-          </TouchableOpacity>
+            {/* Anonymous Login Button */}
+            <TouchableOpacity 
+              style={[styles.btnAlt, styles.btnSecondary]} 
+              onPress={handleAnonymousLogin}
+              disabled={loading}
+            >
+              <ThemedText style={styles.btnSecondaryText}>Guest</ThemedText>
+            </TouchableOpacity>
 
-          {/* Google Login Button */}
-          <TouchableOpacity 
-            style={[styles.btnAlt, styles.btnGoogle]} 
-            onPress={handleGoogleLogin}
-            disabled={loading}
-          >
-            <ThemedText style={styles.btnText}>Google</ThemedText>
-          </TouchableOpacity>
+            {/* Google Login Button */}
+            <TouchableOpacity 
+              style={[styles.btnAlt, styles.btnGoogle]} 
+              onPress={handleGoogleLogin}
+              disabled={loading}
+            >
+              <ThemedText style={styles.btnText}>Google</ThemedText>
+            </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={{marginTop: 15}}>
@@ -288,9 +388,28 @@ export default function AuthScreen() {
               {'\n\n'}
               <ThemedText style={{fontWeight: 'bold'}}>For Drivers:</ThemedText> You agree to share your location while driving to help students track buses.
             </ThemedText>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowTerms(false)}>
-              <ThemedText style={{color: '#fff'}}>Close</ThemedText>
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row', gap: 10, justifyContent: 'flex-end'}}>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowTerms(false)}>
+                <ThemedText style={{color: '#fff'}}>Close</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.acceptBtn}
+                onPress={async () => {
+                  // Accept terms and continue any pending auth action
+                  setHasAgreed(true);
+                  setShowTerms(false);
+                  const action = pendingAuth;
+                  setPendingAuth(null);
+                  // Small delay to allow modal to close smoothly
+                  setTimeout(() => {
+                    if (action === 'anonymous') handleAnonymousLogin();
+                    if (action === 'google') handleGoogleLogin();
+                  }, 200);
+                }}
+              >
+                <ThemedText style={{color: '#fff'}}>Accept</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -367,6 +486,7 @@ const styles = StyleSheet.create({
   passwordContainer: {
     position: 'relative',
     width: '100%',
+    marginTop: 12,
   },
   passwordInput: {
     backgroundColor: '#FAFAFA', 
@@ -377,6 +497,10 @@ const styles = StyleSheet.create({
     borderColor: '#DFBBB1',
     fontSize: 15,
     width: '100%',
+  },
+  passwordHintContainer: {
+    marginTop: 8,
+    gap: 6,
   },
   eyeButton: {
     position: 'absolute',
@@ -407,8 +531,43 @@ const styles = StyleSheet.create({
   btnSecondaryText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   btnGoogle: { backgroundColor: '#4285F4' },
   toggleText: { textAlign: 'center', color: '#BE3E82', fontWeight: '600' },
+
+  passwordHint: { color: '#8E8E93', fontSize: 12, lineHeight: 18 },
+  passwordHintInvalid: { color: '#D64550' },
+  passwordHintValid: { color: '#2E8B57' },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 25 },
   modal: { backgroundColor: '#fff', padding: 25, borderRadius: 20, gap: 15 },
   termsBody: { color: '#5E4352', fontSize: 13, lineHeight: 20 },
-  closeBtn: { backgroundColor: '#5E4352', padding: 12, borderRadius: 10, alignItems: 'center' }
+  closeBtn: { backgroundColor: '#5E4352', padding: 12, borderRadius: 10, alignItems: 'center' },
+  acceptBtn: { backgroundColor: '#F56476', padding: 12, borderRadius: 10, alignItems: 'center' },
+  emailVerificationPrompt: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: '#FFFBE6',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    alignItems: 'center',
+    gap: 10,
+  },
+  emailVerificationText: {
+    fontSize: 14,
+    color: '#CC9900',
+    textAlign: 'center',
+  },
+  resendBtn: {
+    backgroundColor: '#FFD700',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  resendBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  resendBtnDisabled: {
+    backgroundColor: '#CCCCCC',
+    borderColor: '#AAAAAA',
+  },
 });

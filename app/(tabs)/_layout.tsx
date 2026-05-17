@@ -23,6 +23,11 @@ export default function TabLayout() {
     return <Redirect href="/auth" />;
   }
 
+  // 3. Email/password users must verify their email before accessing the app
+  if (!user.isAnonymous && user.provider === 'email' && !user.emailVerified) {
+    return <Redirect href="/auth" />;
+  }
+
   // 3. If user IS logged in, show the tab bar with custom design
   return (
     <Tabs

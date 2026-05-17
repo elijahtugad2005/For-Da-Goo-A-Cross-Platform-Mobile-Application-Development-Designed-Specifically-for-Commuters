@@ -6,8 +6,8 @@ import {
   User as FirebaseUser,
   GoogleAuthProvider,
   linkWithCredential,
-  linkWithPopup,
   onAuthStateChanged,
+  sendEmailVerification,
   signInAnonymously,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -29,6 +29,7 @@ export interface User {
   photoURL?: string | null;
   isAnonymous: boolean;
   provider: 'email' | 'google' | 'anonymous';
+  emailVerified: boolean;
 }
 
 export function useAuth() {
@@ -60,7 +61,8 @@ export function useAuth() {
           name: firebaseUser.displayName || undefined,
           photoURL: firebaseUser.photoURL || null,
           isAnonymous: firebaseUser.isAnonymous,
-          provider: provider
+          provider: provider,
+          emailVerified: firebaseUser.emailVerified,
         });
       } else {
         // User is signed out
@@ -82,8 +84,12 @@ export function useAuth() {
         await updateProfile(userCredential.user, { displayName: name });
       }
       
+      // Send email verification
+      await sendEmailVerification(userCredential.user);
+      console.log('Verification email sent to:', userCredential.user.email);
+
       // Save user role and data to Firestore
-      await saveUserRole(userCredential.user.uid, role, name, userCredential.user.photoURL);
+      await saveUserRole(userCredential.user.uid, role, name, userCredential.user.photoURL, userCredential.user.emailVerified);
       
       return { success: true };
     } catch (error: any) {
@@ -94,8 +100,9 @@ export function useAuth() {
   // Sign in with email and password
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      return { success: true };
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      // Return emailVerified from the fresh credential, not stale state
+      return { success: true, emailVerified: credential.user.emailVerified };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -142,7 +149,8 @@ export function useAuth() {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
         
         // Get user info from Google
-        const { idToken } = await GoogleSignin.signIn();
+        const response = await GoogleSignin.signIn();
+        const idToken = response.type === 'success' ? response.data?.idToken : null;
         
         if (!idToken) {
           throw new Error('No ID token received from Google');
@@ -271,59 +279,44 @@ export function useAuth() {
 
       const provider = new GoogleAuthProvider();
       
+      let result;
       if (Platform.OS === 'web') {
         // Web: Use popup
-        const result = await linkWithPopup(currentUser, provider);
-        
-        // Update user data in Firestore
-        const userRef = doc(firestore, 'users', result.user.uid);
-        const snapshot = await getDoc(userRef);
-        if (snapshot.exists()) {
-          await updateDoc(userRef, {
-            name: result.user.displayName || null,
-            email: result.user.email || null,
-            photoURL: result.user.photoURL || null,
-            linkedAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
-        }
-        
-        // Force reload to trigger onAuthStateChanged with updated data
-        await result.user.reload();
-        
-        return { success: true };
+        const webResult = await signInWithPopup(auth, provider);
+        result = await linkWithCredential(currentUser, GoogleAuthProvider.credentialFromResult(webResult)!);
       } else {
         // Mobile: Use Google Sign-In SDK
         console.log('Linking anonymous account with Google...');
         
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
         
-        const { idToken } = await GoogleSignin.signIn();
+        const response = await GoogleSignin.signIn();
+        const idToken = response.type === 'success' ? response.data?.idToken : null;
         
         if (!idToken) {
           throw new Error('No ID token received from Google');
         }
         
         const googleCredential = GoogleAuthProvider.credential(idToken);
-        const result = await linkWithCredential(currentUser, googleCredential);
-        
-        // Update user data in Firestore
-        const userRef = doc(firestore, 'users', result.user.uid);
-        const snapshot = await getDoc(userRef);
-        if (snapshot.exists()) {
-          await updateDoc(userRef, {
-            name: result.user.displayName || null,
-            email: result.user.email || null,
-            photoURL: result.user.photoURL || null,
-            linkedAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
-        }
-        
-        await result.user.reload();
-        
-        return { success: true };
+        result = await linkWithCredential(currentUser, googleCredential);
       }
+
+      // Update user data in Firestore
+      const userRef = doc(firestore, 'users', result.user.uid);
+      const snapshot = await getDoc(userRef);
+      if (snapshot.exists()) {
+        await updateDoc(userRef, {
+          name: result.user.displayName || null,
+          email: result.user.email || null,
+          photoURL: result.user.photoURL || null,
+          linkedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      
+      await result.user.reload();
+      
+      return { success: true };
     } catch (error: any) {
       console.error('Link with Google error:', error);
       
@@ -332,6 +325,22 @@ export function useAuth() {
         errorMessage = 'This Google account is already linked to another user';
       }
       return { success: false, error: errorMessage };
+    }
+  };
+
+  // Resend email verification
+  const resendEmailVerification = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser && !currentUser.emailVerified) {
+        await sendEmailVerification(currentUser);
+        return { success: true };
+      } else {
+        return { success: false, error: "No user logged in or email already verified." };
+      }
+    } catch (error: any) {
+      console.error("Error resending verification email:", error);
+      return { success: false, error: error.message };
     }
   };
 
@@ -351,23 +360,43 @@ export function useAuth() {
     linkWithEmail,
     linkWithGoogle,
     signOut,
+    resendEmailVerification,
     login // Keep for backward compatibility
   };
 }
 
 // Helper function to save user role to Firestore
 
-async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL?: string | null) {
+async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL?: string | null, emailVerified: boolean = false) {
   try {
     const userRef = doc(firestore, 'users', uid);
-    await setDoc(userRef, {
-      role,
-      name: name || null,
-      photoURL: photoURL || null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    console.log('User role saved successfully');
+    const snapshot = await getDoc(userRef);
+
+    if (snapshot.exists()) {
+      const existingData = snapshot.data();
+      const existingRole = existingData.role as UserRole | null;
+
+      await updateDoc(userRef, {
+        role: existingRole || role,
+        name: name ?? existingData.name ?? null,
+        photoURL: photoURL ?? existingData.photoURL ?? null,
+        updatedAt: serverTimestamp(),
+        emailVerified: emailVerified
+      });
+
+      console.log('User role updated successfully (role preserved)');
+    } else {
+      await setDoc(userRef, {
+        role,
+        name: name || null,
+        photoURL: photoURL || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        emailVerified: emailVerified
+      });
+
+      console.log('User role saved successfully');
+    }
   } catch (error) {
     console.error('Error saving user role to Firestore:', error);
     throw error;
