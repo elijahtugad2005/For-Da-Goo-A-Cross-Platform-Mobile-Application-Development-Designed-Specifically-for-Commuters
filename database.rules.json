@@ -2,20 +2,20 @@
   "rules": {
     "locations": {
       "$userId": {
-        ".read": true,
-        ".write": "$userId === auth.uid"
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $userId"
       }
     },
     "presence": {
-      ".read": true,
+      ".read": "auth != null",
       "$userId": {
-        ".write": "$userId === auth.uid"
+        ".write": "auth != null && auth.uid === $userId"
       }
     },
     "sharedLocations": {
-      ".read": true,
+      ".read": "auth != null",
       "$userId": {
-        ".write": "$userId === auth.uid"
+        ".write": "auth != null && auth.uid === $userId"
       }
     }
   }
