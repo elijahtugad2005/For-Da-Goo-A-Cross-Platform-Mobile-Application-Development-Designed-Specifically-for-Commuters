@@ -485,16 +485,24 @@ export default function AuthScreen() {
               <TouchableOpacity
                 style={styles.acceptBtn}
                 onPress={async () => {
-                  // Accept terms and continue any pending auth action
                   setHasAgreed(true);
                   setShowTerms(false);
                   const action = pendingAuth;
                   setPendingAuth(null);
-                  // Small delay to allow modal to close smoothly
-                  setTimeout(() => {
-                    if (action === 'anonymous') handleAnonymousLogin();
-                    if (action === 'google') handleGoogleLogin();
-                  }, 200);
+                  if (action === 'anonymous') {
+                    setTimeout(() => handleAnonymousLogin(), 200);
+                  } else if (action === 'google') {
+                    // Call signInWithGoogle directly — avoids hasAgreed stale state issue
+                    setLoading(true);
+                    const result = await signInWithGoogle(selectedRole);
+                    if (result.success) {
+                      showToast("Google sign-in successful!", 'success');
+                      setTimeout(() => router.replace('/(tabs)/explore'), 500);
+                    } else {
+                      showToast(result.error || "Google sign-in failed");
+                    }
+                    setLoading(false);
+                  }
                 }}
               >
                 <ThemedText style={{color: '#fff'}}>Accept</ThemedText>

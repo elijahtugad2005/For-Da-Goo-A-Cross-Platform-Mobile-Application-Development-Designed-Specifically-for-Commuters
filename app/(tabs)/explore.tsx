@@ -79,25 +79,12 @@ export default function ExploreScreen() {
   ).current;
 
   const handleTrackLocation = () => {
-    // Anonymous users cannot share location
-    if (user?.isAnonymous) {
-      Alert.alert('ForDaGoo', 'Please create an account to share your location.');
-      return;
-    }
-
-    // Only drivers can broadcast their location
-    if (user?.role !== 'driver') {
-      Alert.alert('ForDaGoo', 'Only drivers can share their location. Students can view the map to track buses.');
-      return;
-    }
-
-    // If they haven't agreed yet, don't start tracking—show the modal instead!
+    // If they haven't agreed yet, show the modal first
     if (!hasAgreed) {
       setShowAgreementModal(true);
       return;
     }
 
-    // If they HAVE agreed, proceed with your existing sharing logic
     if (isSharing) {
       stopSharing();
       Alert.alert('ForDaGoo', 'Tracking stopped.');
@@ -196,50 +183,32 @@ export default function ExploreScreen() {
         </ThemedText>
 
         <View style={styles.sheetContent}>
-          {user?.role === 'driver' && !user?.isAnonymous && (
-            <ThemedText style={styles.driverInfo}>
-              Share your location to help students track the bus in real-time
-            </ThemedText>
-          )}
-
-          {user?.isAnonymous ? (
-            <ThemedText style={styles.driverInfo}>
-              Sign in to share your location or access driver features
-            </ThemedText>
-          ) : user?.role === 'student' ? (
-            <ThemedText style={styles.driverInfo}>
-              You are viewing live bus locations. Only drivers can share their location.
-            </ThemedText>
-          ) : null}
+          <ThemedText style={styles.driverInfo}>
+            {user?.role === 'driver' 
+              ? 'Share your location to help students track the bus in real-time'
+              : 'Share your location so drivers and others can see where you are'
+            }
+          </ThemedText>
           
-          {/* Only drivers can see the share button */}
-          {user?.role === 'driver' && !user?.isAnonymous && (
-            <TouchableOpacity 
-              style={[styles.mainButton, isSharing && styles.buttonActive]}
-              onPress={handleTrackLocation}
-              activeOpacity={0.8}
-            >
-              <ThemedText style={styles.buttonText}>
-                {isSharing ? 'STOP DRIVING' : 'START DRIVING'}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          {/* Students see a read-only status */}
-          {user?.role === 'student' && (
-            <View style={[styles.mainButton, { backgroundColor: '#E5E5EA' }]}>
-              <ThemedText style={[styles.buttonText, { color: '#8E8E93' }]}>
-                TRACKING VIEW (READ ONLY)
-              </ThemedText>
-            </View>
-          )}
+          <TouchableOpacity 
+            style={[styles.mainButton, isSharing && styles.buttonActive]}
+            onPress={handleTrackLocation}
+            activeOpacity={0.8}
+          >
+            <ThemedText style={styles.buttonText}>
+              {isSharing 
+                ? (user?.role === 'driver' ? 'STOP DRIVING' : 'STOP SHARING')
+                : (user?.role === 'driver' ? 'START DRIVING' : 'SHARE MY LOCATION')
+              }
+            </ThemedText>
+          </TouchableOpacity>
 
           <View style={styles.statusRow}>
             <ThemedText style={styles.statusLabel}>Status:</ThemedText>
             <ThemedText style={isSharing ? styles.statusActive : styles.statusInactive}>
               {isSharing 
-                ? " ● Driving"
-                : " ○ Offline"
+                ? (user?.role === 'driver' ? ' ● Driving' : ' ● Live Sharing')
+                : ' ○ Offline'
               }
             </ThemedText>
           </View>

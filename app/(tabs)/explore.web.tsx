@@ -166,17 +166,18 @@ export default function ExploreScreen() {
           </View>
 
           {/* CONTROL BUTTON + STATUS */}
-          {user?.role === 'driver' && !user?.isAnonymous && (
-            <TouchableOpacity 
-              style={[styles.compactButton, isSharing && styles.compactButtonActive]}
-              onPress={handleTrackLocation}
-              activeOpacity={0.8}
-            >
-              <ThemedText style={styles.compactButtonText}>
-                {isSharing ? '⏹ Stop' : '▶ Start'}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={[styles.compactButton, isSharing && styles.compactButtonActive]}
+            onPress={handleTrackLocation}
+            activeOpacity={0.8}
+          >
+            <ThemedText style={styles.compactButtonText}>
+              {isSharing 
+                ? (user?.role === 'driver' ? '⏹ Stop Driving' : '⏹ Stop')
+                : (user?.role === 'driver' ? '▶ Start Driving' : '▶ Share')
+              }
+            </ThemedText>
+          </TouchableOpacity>
 
           <View style={styles.statusBadge}>
             <ThemedText style={[styles.badgeStatusText, isSharing && styles.badgeStatusTextActive]}>

@@ -137,39 +137,30 @@ export function useAuth() {
     try {
       const provider = new GoogleAuthProvider();
       
-      let userCredential;
-      
       if (Platform.OS === 'web') {
-        // Web: Use popup
-        userCredential = await signInWithPopup(auth, provider);
-      } else {
-        // Mobile: Use Google Sign-In SDK
-        console.log('Starting Google Sign-In for mobile...');
-        
-        // Check if device supports Google Play Services
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        
-        // Get user info from Google
-        const response = await GoogleSignin.signIn();
-        const idToken = response.type === 'success' ? response.data?.idToken : null;
-        
-        if (!idToken) {
-          throw new Error('No ID token received from Google');
-        }
-        
-        // Create Firebase credential
-        const googleCredential = GoogleAuthProvider.credential(idToken);
-        
-        // Sign in to Firebase with the credential
-        userCredential = await signInWithCredential(auth, googleCredential);
-        
-        console.log('Google Sign-In successful!');
+        const userCredential = await signInWithPopup(auth, provider);
+        await saveUserRole(
+          userCredential.user.uid,
+          role,
+          userCredential.user.displayName || undefined,
+          userCredential.user.photoURL
+        );
+        return { success: true };
       }
+
+      // Mobile: Use Google Sign-In SDK
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+      const idToken = response.type === 'success' ? response.data?.idToken : null;
       
-      // Save user role and data to Firestore (including Google photo)
+      if (!idToken) throw new Error('No ID token received from Google');
+      
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, googleCredential);
+      
       await saveUserRole(
-        userCredential.user.uid, 
-        role, 
+        userCredential.user.uid,
+        role,
         userCredential.user.displayName || undefined,
         userCredential.user.photoURL
       );
@@ -177,17 +168,10 @@ export function useAuth() {
       return { success: true };
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
-      
       let errorMessage = 'Google Sign-In failed';
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Sign-in cancelled';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your connection';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
+      if (error.code === 'auth/popup-closed-by-user') errorMessage = 'Sign-in cancelled';
+      else if (error.code === 'auth/network-request-failed') errorMessage = 'Network error. Please check your connection';
+      else if (error.message) errorMessage = error.message;
       return { success: false, error: errorMessage };
     }
   };
@@ -282,7 +266,6 @@ export function useAuth() {
       
       let result;
       if (Platform.OS === 'web') {
-        // Web: Use popup
         const webResult = await signInWithPopup(auth, provider);
         result = await linkWithCredential(currentUser, GoogleAuthProvider.credentialFromResult(webResult)!);
       } else {
