@@ -7,8 +7,11 @@ import React, { useEffect, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AuthScreen() {
-  const { user, signUpWithEmail, signInWithEmail, signInAnonymous, signInWithGoogle, resendEmailVerification } = useAuth();
+  const { user, signUpWithEmail, signInWithEmail, signInAnonymous, signInWithGoogle, resendEmailVerification, forgotPassword, checkEmailVerification } = useAuth();
   const [showEmailVerificationPrompt, setShowEmailVerificationPrompt] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const router = useRouter();
   
   const [isLogin, setIsLogin] = useState(true);
@@ -32,6 +35,31 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Clear fields when switching between login and signup
+  const handleToggleMode = () => {
+    setIsLogin(!isLogin);
+    setEmail('');
+    setPassword('');
+    setName('');
+    setConfirmPassword('');
+    setHasAgreed(false);
+    setShowEmailVerificationPrompt(false);
+  };
+
+  // Poll for email verification every 5 seconds when prompt is showing
+  useEffect(() => {
+    if (!showEmailVerificationPrompt) return;
+    const interval = setInterval(async () => {
+      const { verified } = await checkEmailVerification();
+      if (verified) {
+        clearInterval(interval);
+        showToast("Email verified! Redirecting...", 'success');
+        setTimeout(() => router.replace('/(tabs)/explore'), 1000);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [showEmailVerificationPrompt]);
 
   const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
     setToastMessage(message);
@@ -168,6 +196,33 @@ export default function AuthScreen() {
       showToast(result.error || "Failed to send verification email.");
     }
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmed = forgotEmail.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmed) {
+      showToast("Please enter your email address");
+      return;
+    }
+    if (!emailRegex.test(trimmed)) {
+      showToast("Please enter a valid email address");
+      return;
+    }
+    setForgotLoading(true);
+    const result = await forgotPassword(trimmed);
+    if (result.success) {
+      showToast("Password reset email sent! Check your inbox.", 'success');
+      setShowForgotPassword(false);
+      setForgotEmail('');
+    } else {
+      let msg = "Failed to send reset email";
+      if (result.error?.includes('user-not-found')) msg = "No account found with this email";
+      else if (result.error?.includes('too-many-requests')) msg = "Too many attempts. Try again later.";
+      else if (result.error) msg = result.error;
+      showToast(msg);
+    }
+    setForgotLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -312,6 +367,13 @@ export default function AuthScreen() {
           </View>
         )}
 
+        {/* Forgot Password - only on login */}
+        {isLogin && (
+          <TouchableOpacity onPress={() => setShowForgotPassword(true)} style={{ alignSelf: 'flex-end' }}>
+            <ThemedText style={styles.forgotText}>Forgot Password?</ThemedText>
+          </TouchableOpacity>
+        )}
+
         {/* Only show Terms checkbox during Sign Up */}
         {!isLogin && (
           <View style={styles.row}>
@@ -369,12 +431,40 @@ export default function AuthScreen() {
             </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={{marginTop: 15}}>
+        <TouchableOpacity onPress={handleToggleMode} style={{marginTop: 15}}>
           <ThemedText style={styles.toggleText}>
             {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
           </ThemedText>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showForgotPassword} transparent animationType="fade">
+        <View style={styles.modalBg}>
+          <View style={styles.modal}>
+            <ThemedText type="subtitle">Reset Password</ThemedText>
+            <ThemedText style={{ color: '#5E4352', fontSize: 13 }}>
+              Enter your email and we'll send you a reset link.
+            </ThemedText>
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              value={forgotEmail}
+              onChangeText={setForgotEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor="#5E435280"
+            />
+            <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => { setShowForgotPassword(false); setForgotEmail(''); }}>
+                <ThemedText style={{ color: '#fff' }}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.acceptBtn} onPress={handleForgotPassword} disabled={forgotLoading}>
+                <ThemedText style={{ color: '#fff' }}>{forgotLoading ? 'Sending...' : 'Send Reset Email'}</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showTerms} transparent animationType="fade">
         <View style={styles.modalBg}>
@@ -532,6 +622,7 @@ const styles = StyleSheet.create({
   btnGoogle: { backgroundColor: '#4285F4' },
   toggleText: { textAlign: 'center', color: '#BE3E82', fontWeight: '600' },
 
+  forgotText: { color: '#BE3E82', fontSize: 13, fontWeight: '600' },
   passwordHint: { color: '#8E8E93', fontSize: 12, lineHeight: 18 },
   passwordHintInvalid: { color: '#D64550' },
   passwordHintValid: { color: '#2E8B57' },

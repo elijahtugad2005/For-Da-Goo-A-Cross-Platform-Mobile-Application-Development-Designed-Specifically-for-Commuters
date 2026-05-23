@@ -1,18 +1,20 @@
 import { auth, database, firestore } from '@/config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
-  createUserWithEmailAndPassword,
-  EmailAuthProvider,
-  User as FirebaseUser,
-  GoogleAuthProvider,
-  linkWithCredential,
-  onAuthStateChanged,
-  sendEmailVerification,
-  signInAnonymously,
-  signInWithCredential,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile
+    createUserWithEmailAndPassword,
+    EmailAuthProvider,
+    User as FirebaseUser,
+    GoogleAuthProvider,
+    linkWithCredential,
+    onAuthStateChanged,
+    reload,
+    sendEmailVerification,
+    sendPasswordResetEmail,
+    signInAnonymously,
+    signInWithCredential,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+    updateProfile
 } from 'firebase/auth';
 import { ref, remove } from 'firebase/database';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
@@ -86,7 +88,6 @@ export function useAuth() {
       
       // Send email verification
       await sendEmailVerification(userCredential.user);
-      console.log('Verification email sent to:', userCredential.user.email);
 
       // Save user role and data to Firestore
       await saveUserRole(userCredential.user.uid, role, name, userCredential.user.photoURL, userCredential.user.emailVerified);
@@ -328,6 +329,29 @@ export function useAuth() {
     }
   };
 
+  // Forgot password
+  const forgotPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      return { success: true };
+    } catch (error: any) {
+      console.error('Forgot password error:', error.code, error.message);
+      return { success: false, error: error.message, code: error.code };
+    }
+  };
+
+  // Check if current user has verified their email (for polling after verification)
+  const checkEmailVerification = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return { verified: false };
+      await reload(currentUser);
+      return { verified: currentUser.emailVerified };
+    } catch (error: any) {
+      return { verified: false };
+    }
+  };
+
   // Resend email verification
   const resendEmailVerification = async () => {
     try {
@@ -344,11 +368,7 @@ export function useAuth() {
     }
   };
 
-  // Legacy login method for backward compatibility
-  const login = (email: string, role: UserRole, name?: string) => {
-    // This is now handled by signInWithEmail or signUpWithEmail
-    console.warn('login() is deprecated. Use signInWithEmail() or signUpWithEmail()');
-  };
+  // Legacy login method kept for backward compatibility — no-op
 
   return { 
     user, 
@@ -360,8 +380,9 @@ export function useAuth() {
     linkWithEmail,
     linkWithGoogle,
     signOut,
+    forgotPassword,
+    checkEmailVerification,
     resendEmailVerification,
-    login // Keep for backward compatibility
   };
 }
 
