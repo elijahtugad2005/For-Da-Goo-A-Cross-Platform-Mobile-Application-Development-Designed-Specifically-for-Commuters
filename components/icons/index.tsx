@@ -1,3 +1,4 @@
+export { AdminIcon } from './admin-icon';
 export { DriverIcon } from './driver-icon';
 export { EyeIcon } from './eye-icon';
 export { LocationIcon } from './location-icon';

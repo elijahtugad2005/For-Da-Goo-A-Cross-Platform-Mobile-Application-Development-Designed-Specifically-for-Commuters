@@ -13,5 +13,20 @@ export default function Index() {
     );
   }
 
+<<<<<<< HEAD
+  // Redirect based on user role
+  if (!user) {
+    return <Redirect href="/auth" />;
+  }
+
+  // Redirect admin users to admin panel
+  if (user.role === 'admin') {
+    return <Redirect href="/(admin)/" />;
+  }
+
+  // Redirect student/driver users to tabs
+  return <Redirect href="/(tabs)/explore" />;
+=======
   return <Redirect href={user ? "/(tabs)/explore" : "/auth"} />;
+>>>>>>> f436dee2145d0f9cf43231c3354d45f581522a8e
 }

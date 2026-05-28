@@ -4,7 +4,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useLocationSharing } from '@/hooks/use-location-sharing';
 import { useUserPresence } from '@/hooks/use-user-presence';
 import { useAuth } from '@/hooks/useAuth';
-import React, { useRef, useState } from 'react';
+import  { useRef, useState } from 'react';
 import { Alert, Animated, Modal, PanResponder, SafeAreaView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ExploreScreen() {

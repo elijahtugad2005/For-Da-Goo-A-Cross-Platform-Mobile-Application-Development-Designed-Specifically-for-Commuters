@@ -6,10 +6,15 @@ import {
     User as FirebaseUser,
     GoogleAuthProvider,
     linkWithCredential,
+<<<<<<< HEAD
+    linkWithPopup,
+    onAuthStateChanged,
+=======
     onAuthStateChanged,
     reload,
     sendEmailVerification,
     sendPasswordResetEmail,
+>>>>>>> f436dee2145d0f9cf43231c3354d45f581522a8e
     signInAnonymously,
     signInWithCredential,
     signInWithEmailAndPassword,
@@ -21,7 +26,7 @@ import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firest
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-export type UserRole = 'student' | 'driver';
+export type UserRole = 'student' | 'driver' | 'admin';
 
 export interface User {
   uid: string;
@@ -374,6 +379,21 @@ export function useAuth() {
 async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL?: string | null, emailVerified: boolean = false) {
   try {
     const userRef = doc(firestore, 'users', uid);
+<<<<<<< HEAD
+    const currentUser = auth.currentUser;
+    
+    await setDoc(userRef, {
+      uid,
+      email: currentUser?.email || null,
+      role,
+      name: name || null,
+      photoURL: photoURL || null,
+      status: 'active', // Default status for new users
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    console.log('User role saved successfully');
+=======
     const snapshot = await getDoc(userRef);
 
     if (snapshot.exists()) {
@@ -401,6 +421,7 @@ async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL
 
       console.log('User role saved successfully');
     }
+>>>>>>> f436dee2145d0f9cf43231c3354d45f581522a8e
   } catch (error) {
     console.error('Error saving user role to Firestore:', error);
     throw error;
