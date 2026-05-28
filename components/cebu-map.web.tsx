@@ -4,7 +4,6 @@ import { MapContainer, Marker, Polygon, Polyline, Popup, TileLayer } from 'react
 import { StyleSheet, View } from 'react-native';
 import { SharedLocation } from '../hooks/use-location-sharing';
 
-// Fix for default marker icon in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -18,8 +17,67 @@ interface CebuMapProps {
   showBoundary?: boolean;
 }
 
+function buildMarkerHtml(photoURL?: string, userName?: string): string {
+  const name = userName || 'User';
+  const initial = name.charAt(0).toUpperCase();
+  const accent = '#F56476';
+
+  const tail = `
+    <svg
+      style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);"
+      width="14" height="14" viewBox="0 0 14 14"
+    >
+      <polygon points="0,0 14,0 7,14" fill="${accent}"/>
+    </svg>`;
+
+  let avatar: string;
+
+  if (photoURL?.includes('googleusercontent.com')) {
+    avatar = `
+      <div style="
+        width:52px;
+        height:52px;
+        border-radius:50%;
+        border:3px solid ${accent};
+        background:white url('${photoURL}') center/cover no-repeat;
+      "></div>`;
+  } else if (photoURL) {
+    avatar = `
+      <div style="
+        width:52px;
+        height:52px;
+        border-radius:50%;
+        overflow:hidden;
+        border:3px solid ${accent};
+        background:white;
+      ">
+        <img
+          src="${photoURL}"
+          style="width:100%;height:100%;object-fit:cover;"
+          onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:${accent};display:flex;align-items:center;justify-content:center;color:white;font-weight:500;font-size:20px;\\'>${initial}</div>';"
+        />
+      </div>`;
+  } else {
+    const silhouette = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E`;
+    avatar = `
+      <div style="
+        width:52px;
+        height:52px;
+        border-radius:50%;
+        border:3px solid ${accent};
+        background:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+      ">
+        <img src="${silhouette}" style="width:26px;height:26px;" />
+      </div>`;
+  }
+
+  return `<div style="position:relative;width:52px;height:62px;">${avatar}${tail}</div>`;
+}
+
 export function CebuMap({ sharedLocations, activeRoute = 'Select Route', showBoundary = true }: CebuMapProps) {
-  // Load Leaflet CSS dynamically
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -27,13 +85,9 @@ export function CebuMap({ sharedLocations, activeRoute = 'Select Route', showBou
     link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
     link.crossOrigin = '';
     document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
+    return () => { document.head.removeChild(link); };
   }, []);
 
-  // Routes data - [latitude, longitude] format for Leaflet
   const KAWIT_ROUTE: [number, number][] = [
     [10.31099, 123.92085], [10.32573, 123.93788], [10.33863, 123.95499],
     [10.38729, 124.00120], [10.52128, 124.02924], [10.72555, 124.01415],
@@ -163,23 +217,15 @@ export function CebuMap({ sharedLocations, activeRoute = 'Select Route', showBou
     [11.267705, 124.007381], [11.268172, 124.008482], [11.26656, 124.00854],
   ];
 
-  // Boundary polygon
   const BOUNDARY_COORDS: [number, number][] = [
-    [11.30107, 123.49031], // topLeft
-    [11.24181, 124.54687], // topRight
-    [10.13795, 124.22894], // bottomRight
-    [10.10010, 123.19611], // bottomLeft
+    [11.30107, 123.49031],
+    [11.24181, 124.54687],
+    [10.13795, 124.22894],
+    [10.10010, 123.19611],
   ];
 
   const shouldShowKawit = activeRoute === 'Via Kawit' || activeRoute === 'Both';
   const shouldShowBagay = activeRoute === 'Via Bagay' || activeRoute === 'Both';
-
-  // Custom marker icon for shared locations
-  const userIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAzMCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIxNSIgY3k9IjE1IiByPSIxNSIgZmlsbD0iI0Y1NjQ3NiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzIi8+Cjwvc3ZnPg==',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-  });
 
   return (
     <View style={styles.container}>
@@ -194,7 +240,6 @@ export function CebuMap({ sharedLocations, activeRoute = 'Select Route', showBou
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Boundary */}
         {showBoundary && (
           <Polygon
             positions={BOUNDARY_COORDS}
@@ -207,105 +252,44 @@ export function CebuMap({ sharedLocations, activeRoute = 'Select Route', showBou
           />
         )}
 
-        {/* Kawit Route */}
         {shouldShowKawit && (
           <Polyline
             positions={KAWIT_ROUTE}
-            pathOptions={{
-              color: '#F56476',
-              weight: 4,
-              opacity: 0.8,
-            }}
+            pathOptions={{ color: '#F56476', weight: 4, opacity: 0.8 }}
           />
         )}
 
-        {/* Bagay Route */}
         {shouldShowBagay && (
           <Polyline
             positions={BAGAY_ROUTE}
-            pathOptions={{
-              color: '#34A853',
-              weight: 4,
-              opacity: 0.8,
-            }}
+            pathOptions={{ color: '#34A853', weight: 4, opacity: 0.8 }}
           />
         )}
 
-        {/* Shared Location Markers */}
-        {sharedLocations && Object.entries(sharedLocations).map(([id, location]) => {
-          // For Google profile pictures, try to load them, but have a solid fallback
-          // Google photos work when opened directly but may have CORS issues when embedded
-          const userName = location.userName || 'User';
-          const userInitial = userName.charAt(0).toUpperCase();
-          
-          // Create a marker with either the photo or a colored circle with initial
-          let markerHtml;
-          
-          if (location.userPhotoURL && location.userPhotoURL.includes('googleusercontent.com')) {
-            // For Google photos, use background-image which handles CORS better
-            markerHtml = `
-              <div style="
-                width: 40px; 
-                height: 40px; 
-                border-radius: 50%; 
-                border: 3px solid #F56476; 
-                background: white url('${location.userPhotoURL}') center/cover no-repeat; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              "></div>`;
-          } else if (location.userPhotoURL) {
-            // For other photo URLs, use img tag
-            markerHtml = `
-              <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 3px solid #F56476; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                <img 
-                  src="${location.userPhotoURL}" 
-                  style="width: 100%; height: 100%; object-fit: cover;" 
-                  onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:#F56476;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:18px;\\'>${userInitial}</div>';" 
-                />
-              </div>`;
-          } else {
-            // Fallback: Use a default silhouette icon (similar to profile screen)
-            // Using a simple SVG silhouette that matches the default profile picture style
-            const silhouetteSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E`;
-            
-            markerHtml = `
-              <div style="
-                width: 40px; 
-                height: 40px; 
-                border-radius: 50%; 
-                border: 3px solid #F56476; 
-                background: white; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-              ">
-                <img src="${silhouetteSvg}" style="width: 24px; height: 24px; opacity: 0.7;" />
-              </div>`;
-          }
+        {sharedLocations &&
+          Object.entries(sharedLocations).map(([id, location]) => {
+            const customIcon = L.divIcon({
+              html: buildMarkerHtml(location.userPhotoURL, location.userName),
+              className: 'custom-marker',
+              iconSize: [52, 62],
+              iconAnchor: [26, 62],
+              popupAnchor: [0, -64],
+            });
 
-          const customIcon = L.divIcon({
-            html: markerHtml,
-            className: 'custom-marker',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -20]
-          });
-
-          return (
-            <Marker
-              key={id}
-              position={[location.latitude, location.longitude]}
-              icon={customIcon}
-            >
-              <Popup>
-                <div style={{ textAlign: 'center', padding: '5px' }}>
-                  <strong>{userName}</strong>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+            return (
+              <Marker
+                key={id}
+                position={[location.latitude, location.longitude]}
+                icon={customIcon}
+              >
+                <Popup>
+                  <div style={{ textAlign: 'center', padding: '5px' }}>
+                    <strong>{location.userName || 'User'}</strong>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
       </MapContainer>
     </View>
   );

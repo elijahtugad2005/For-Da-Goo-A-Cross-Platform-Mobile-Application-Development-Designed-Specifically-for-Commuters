@@ -132,7 +132,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - _Requirements: 1.3, 15.3, 15.4_
 
 - [ ] 5. Implement admin dashboard screen
-  - [-] 5.1 Create dashboard screen component
+  - [ ] 5.1 Create dashboard screen component
     - Create `app/(admin)/index.tsx` file
     - Use useAdminUsers hook to access students and drivers
     - Calculate total student count, total driver count
@@ -142,7 +142,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 11.1, 11.2_
 
 - [ ] 6. Implement user list screens
-  - [~] 6.1 Create students list screen
+  - [ ] 6.1 Create students list screen
     - Create `app/(admin)/students.tsx` file
     - Use useAdminUsers hook and call fetchUsers('student') on mount
     - Implement FlatList with UserCard components
@@ -154,7 +154,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Detach listeners on unmount
     - _Requirements: 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 6.1, 11.3, 11.6, 13.3, 13.4, 13.5_
 
-  - [~] 6.2 Create drivers list screen
+  - [ ] 6.2 Create drivers list screen
     - Create `app/(admin)/drivers.tsx` file
     - Use useAdminUsers hook and call fetchUsers('driver') on mount
     - Implement FlatList with UserCard components
@@ -166,14 +166,14 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Detach listeners on unmount
     - _Requirements: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 6.1, 11.3, 11.6, 13.3, 13.4, 13.5_
 
-  - [~] 6.3 Implement pagination for user lists
+  - [ ] 6.3 Implement pagination for user lists
     - Add limit(50) to Firestore queries in fetchUsers
     - Implement cursor-based pagination with startAfter
     - Load next page when user scrolls to end of list
     - _Requirements: 2.4, 13.1, 13.2_
 
 - [ ] 7. Implement user detail screen
-  - [~] 7.1 Create user detail screen component
+  - [ ] 7.1 Create user detail screen component
     - Create `app/(admin)/user-detail.tsx` file
     - Get uid from router params using useLocalSearchParams
     - Use getUserById from useAdminUsers to fetch user data
@@ -183,14 +183,14 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Show "No location data" message when location unavailable
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 14.2, 14.3_
 
-  - [~] 7.2 Implement edit and save functionality
+  - [ ] 7.2 Implement edit and save functionality
     - Add form inputs for editable fields
     - Call updateUser on save button press
     - Display success Toast on successful update
     - Display error Toast on failed update
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 5.7, 12.1, 12.2_
 
-  - [~] 7.3 Implement delete functionality
+  - [ ] 7.3 Implement delete functionality
     - Add delete button with confirmation dialog
     - Call deleteUser on confirmation
     - Navigate back to list on successful deletion
@@ -199,7 +199,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - _Requirements: 6.1, 6.2, 6.7, 12.1, 12.2_
 
 - [ ] 8. Create admin UI components
-  - [~] 8.1 Create UserCard component
+  - [ ] 8.1 Create UserCard component
     - Create `components/admin/user-card.tsx` file
     - Accept user, onPress, onDelete props
     - Display ProfileIcon avatar
@@ -210,7 +210,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Use #F56476 accent color for highlights
     - _Requirements: 2.3, 11.1, 11.2, 11.3, 11.5_
 
-  - [~] 8.2 Create AddUserModal component
+  - [ ] 8.2 Create AddUserModal component
     - Create `components/admin/add-user-modal.tsx` file
     - Accept visible, role, onClose, onSuccess props
     - Add form inputs for name, email, password, status
@@ -222,7 +222,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Close modal and call onSuccess on success
     - _Requirements: 4.3, 4.4, 4.5, 4.8, 4.9, 12.1, 12.4_
 
-  - [~] 8.3 Create StatusBadge component
+  - [ ] 8.3 Create StatusBadge component
     - Create `components/admin/status-badge.tsx` file
     - Accept status and optional size props
     - Render pill badge with appropriate styling for active/inactive
@@ -238,21 +238,21 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Render StatusBadge component
     - Assert component renders without error for all status values
 
-- [~] 9. Checkpoint - Verify UI components
+- [ ] 9. Checkpoint - Verify UI components
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement error handling and user feedback
-  - [~] 10.1 Add Toast feedback for all CRUD operations
+  - [ ] 10.1 Add Toast feedback for all CRUD operations
     - Show success Toast on successful create, update, delete
     - Show error Toast with descriptive message on failures
     - _Requirements: 12.1, 12.2_
 
-  - [~] 10.2 Add error state handling in list screens
+  - [ ] 10.2 Add error state handling in list screens
     - Display error message when fetchUsers fails
     - Show network error message with retry option
     - _Requirements: 12.3_
 
-  - [~] 10.3 Add re-authentication prompt for permission errors
+  - [ ] 10.3 Add re-authentication prompt for permission errors
     - Detect permission-denied errors from Firestore
     - Display message prompting admin to re-authenticate
     - _Requirements: 1.5, 12.5_
@@ -285,7 +285,7 @@ This implementation plan builds the Admin CRUD Panel feature for the ForDaGoo ap
     - Call fetchUsers and verify isOnline is false
     - _Requirements: 2.5, 2.6, 2.7, 14.1_
 
-- [~] 12. Final checkpoint and verification
+- [ ] 12. Final checkpoint and verification
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

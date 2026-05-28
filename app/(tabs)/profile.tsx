@@ -1,4 +1,4 @@
-import { DriverIcon, LogoutIcon, StudentIcon } from '@/components/icons';
+import { AdminIcon, DriverIcon, LogoutIcon, StudentIcon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Toast } from '@/components/toast';
@@ -129,7 +129,9 @@ export default function ProfileScreen() {
             <View style={styles.card}>
               <View style={styles.roleCard}>
                 <View style={styles.roleIconContainer}>
-                  {user?.role === 'driver' ? (
+                  {user?.role === 'admin' ? (
+                    <AdminIcon size={28} color="#FFFFFF" />
+                  ) : user?.role === 'driver' ? (
                     <DriverIcon size={28} color="#FFFFFF" />
                   ) : (
                     <StudentIcon size={28} color="#FFFFFF" />
@@ -137,12 +139,14 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.roleInfo}>
                   <ThemedText style={styles.roleTitle}>
-                    {user?.role === 'driver' ? 'Driver' : 'Student'}
+                    {user?.role === 'admin' ? 'Admin' : user?.role === 'driver' ? 'Driver' : 'Student'}
                   </ThemedText>
                   <ThemedText style={styles.roleDescription}>
-                    {user?.role === 'driver' 
-                      ? 'You can share your location while driving'
-                      : 'You can track buses in real-time'
+                    {user?.role === 'admin'
+                      ? 'You have full access to manage users and system settings'
+                      : user?.role === 'driver' 
+                        ? 'You can share your location while driving'
+                        : 'You can track buses in real-time'
                     }
                   </ThemedText>
                 </View>
@@ -167,7 +171,7 @@ export default function ProfileScreen() {
               <View style={styles.infoRow}>
                 <ThemedText style={styles.infoLabel}>Role</ThemedText>
                 <ThemedText style={styles.infoValue}>
-                  {user?.role === 'driver' ? 'Driver' : 'Student'}
+                  {user?.role === 'admin' ? 'Admin' : user?.role === 'driver' ? 'Driver' : 'Student'}
                 </ThemedText>
               </View>
             </View>
@@ -188,6 +192,22 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          {/* Admin Panel Button - Only visible for admin users */}
+          {user?.role === 'admin' && (
+            <View style={styles.adminSection}>
+              <TouchableOpacity 
+                style={styles.adminPanelButton} 
+                onPress={() => router.push('/(admin)' as any)}
+              >
+                <View style={styles.adminPanelContent}>
+                  <AdminIcon size={22} color="#FFFFFF" />
+                  <ThemedText style={styles.adminPanelButtonText}>Admin Panel</ThemedText>
+                </View>
+                <ThemedText style={styles.adminPanelArrow}>→</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
@@ -482,6 +502,38 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#E5E5EA',
+  },
+  adminSection: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  adminPanelButton: {
+    backgroundColor: '#8B5CF6',
+    padding: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  adminPanelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  adminPanelButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  adminPanelArrow: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
   },
   actionButtonsRow: {
     flexDirection: 'row',

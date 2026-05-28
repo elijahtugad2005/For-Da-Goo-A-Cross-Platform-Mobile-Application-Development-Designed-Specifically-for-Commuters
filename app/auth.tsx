@@ -29,11 +29,28 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Hidden admin mode state
+  const [adminModeEnabled, setAdminModeEnabled] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
 
   const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
     setToastMessage(message);
     setToastType(type);
     setToastVisible(true);
+  };
+
+  // Check for secret admin credentials
+  const checkAdminAccess = () => {
+    if (email.toLowerCase() === 'burgers' && password.toLowerCase() === 'cookies') {
+      setAdminModeEnabled(true);
+      setEmail('');
+      setPassword('');
+      showToast('Admin mode activated! You can now create admin accounts.', 'success');
+      setIsLogin(false); // Switch to signup mode
+      return true;
+    }
+    return false;
   };
 
   const handleAuth = async () => {
@@ -42,8 +59,13 @@ export default function AuthScreen() {
       return;
     }
 
+    // Check for admin access secret code (only in login mode)
+    if (isLogin && checkAdminAccess()) {
+      return; // Admin mode activated, don't proceed with login
+    }
+
     // Only check agreement during sign-up
-    if (!isLogin && !hasAgreed) {
+    if (!isLogin && !hasAgreed && !adminModeEnabled) {
       showToast("Please accept the Terms & Privacy Policy");
       return;
     }
@@ -79,10 +101,18 @@ export default function AuthScreen() {
         showToast(errorMessage);
       }
     } else {
+      // Determine role: admin if admin mode is enabled, otherwise selected role
+      const roleToUse: UserRole = adminModeEnabled ? 'admin' : selectedRole;
+      
       // Sign up with email
-      const result = await signUpWithEmail(email, password, selectedRole, name);
+      const result = await signUpWithEmail(email, password, roleToUse, name);
       if (result.success) {
-        showToast("Account created successfully!", 'success');
+        if (adminModeEnabled) {
+          showToast("Admin account created successfully!", 'success');
+          setAdminModeEnabled(false); // Reset admin mode
+        } else {
+          showToast("Account created successfully!", 'success');
+        }
         setTimeout(() => router.replace('/(tabs)/explore'), 500);
       } else {
         // Parse Firebase error messages
@@ -147,30 +177,41 @@ export default function AuthScreen() {
       </ThemedText>
       
       <View style={styles.form}>
-        {/* Role Selection */}
-        <View style={styles.roleContainer}>
-          <ThemedText style={styles.roleLabel}>I am a:</ThemedText>
-          <View style={styles.roleButtons}>
-            <TouchableOpacity 
-              style={[styles.roleButton, selectedRole === 'student' && styles.roleButtonActive]}
-              onPress={() => setSelectedRole('student')}
-            >
-              <StudentIcon size={20} color={selectedRole === 'student' ? '#F56476' : '#5E4352'} />
-              <ThemedText style={[styles.roleButtonText, selectedRole === 'student' && styles.roleButtonTextActive]}>
-                Student
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.roleButton, selectedRole === 'driver' && styles.roleButtonActive]}
-              onPress={() => setSelectedRole('driver')}
-            >
-              <DriverIcon size={20} color={selectedRole === 'driver' ? '#F56476' : '#5E4352'} />
-              <ThemedText style={[styles.roleButtonText, selectedRole === 'driver' && styles.roleButtonTextActive]}>
-                Driver
-              </ThemedText>
-            </TouchableOpacity>
+        {/* Admin Mode Indicator */}
+        {adminModeEnabled && (
+          <View style={styles.adminModeIndicator}>
+            <ThemedText style={styles.adminModeText}>
+              🔐 Admin Mode Active - Creating Admin Account
+            </ThemedText>
           </View>
-        </View>
+        )}
+
+        {/* Role Selection - Hidden when admin mode is active */}
+        {!adminModeEnabled && (
+          <View style={styles.roleContainer}>
+            <ThemedText style={styles.roleLabel}>I am a:</ThemedText>
+            <View style={styles.roleButtons}>
+              <TouchableOpacity 
+                style={[styles.roleButton, selectedRole === 'student' && styles.roleButtonActive]}
+                onPress={() => setSelectedRole('student')}
+              >
+                <StudentIcon size={20} color={selectedRole === 'student' ? '#F56476' : '#5E4352'} />
+                <ThemedText style={[styles.roleButtonText, selectedRole === 'student' && styles.roleButtonTextActive]}>
+                  Student
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.roleButton, selectedRole === 'driver' && styles.roleButtonActive]}
+                onPress={() => setSelectedRole('driver')}
+              >
+                <DriverIcon size={20} color={selectedRole === 'driver' ? '#F56476' : '#5E4352'} />
+                <ThemedText style={[styles.roleButtonText, selectedRole === 'driver' && styles.roleButtonTextActive]}>
+                  Driver
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {!isLogin && (
           <TextInput 
@@ -229,8 +270,8 @@ export default function AuthScreen() {
           </View>
         )}
 
-        {/* Only show Terms checkbox during Sign Up */}
-        {!isLogin && (
+        {/* Only show Terms checkbox during Sign Up (not in admin mode) */}
+        {!isLogin && !adminModeEnabled && (
           <View style={styles.row}>
             <TouchableOpacity 
               style={[styles.checkbox, hasAgreed && {backgroundColor: '#F56476'}]} 
@@ -327,6 +368,20 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
     maxWidth: 500, // Limit width on web
+  },
+  adminModeIndicator: {
+    backgroundColor: '#F5647620',
+    borderWidth: 2,
+    borderColor: '#F56476',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+  },
+  adminModeText: {
+    color: '#F56476',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 14,
   },
   roleContainer: { marginBottom: 10 },
   roleLabel: { fontSize: 14, color: '#5E4352', fontWeight: '600', marginBottom: 10 },

@@ -8,7 +8,16 @@ export default function Index() {
     return null; // or a loading screen
   }
 
-  // Redirect to auth if not logged in, if yes to explore
-  
-  return <Redirect href={user ? "/(tabs)/explore" : "/auth"} />;
+  // Redirect based on user role
+  if (!user) {
+    return <Redirect href="/auth" />;
+  }
+
+  // Redirect admin users to admin panel
+  if (user.role === 'admin') {
+    return <Redirect href="/(admin)/" />;
+  }
+
+  // Redirect student/driver users to tabs
+  return <Redirect href="/(tabs)/explore" />;
 }

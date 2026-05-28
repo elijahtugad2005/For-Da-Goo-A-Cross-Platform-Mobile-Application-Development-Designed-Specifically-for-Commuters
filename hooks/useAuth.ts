@@ -360,10 +360,15 @@ export function useAuth() {
 async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL?: string | null) {
   try {
     const userRef = doc(firestore, 'users', uid);
+    const currentUser = auth.currentUser;
+    
     await setDoc(userRef, {
+      uid,
+      email: currentUser?.email || null,
       role,
       name: name || null,
       photoURL: photoURL || null,
+      status: 'active', // Default status for new users
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
