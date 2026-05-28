@@ -1,25 +1,20 @@
 import { auth, database, firestore } from '@/config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
-    createUserWithEmailAndPassword,
-    EmailAuthProvider,
-    User as FirebaseUser,
-    GoogleAuthProvider,
-    linkWithCredential,
-<<<<<<< HEAD
-    linkWithPopup,
-    onAuthStateChanged,
-=======
-    onAuthStateChanged,
-    reload,
-    sendEmailVerification,
-    sendPasswordResetEmail,
->>>>>>> f436dee2145d0f9cf43231c3354d45f581522a8e
-    signInAnonymously,
-    signInWithCredential,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    updateProfile
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  User as FirebaseUser,
+  GoogleAuthProvider,
+  linkWithCredential,
+  onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInAnonymously,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile
 } from 'firebase/auth';
 import { ref, remove } from 'firebase/database';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
@@ -379,7 +374,7 @@ export function useAuth() {
 async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL?: string | null, emailVerified: boolean = false) {
   try {
     const userRef = doc(firestore, 'users', uid);
-<<<<<<< HEAD
+
     const currentUser = auth.currentUser;
     
     await setDoc(userRef, {
@@ -393,7 +388,7 @@ async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL
       updatedAt: serverTimestamp()
     });
     console.log('User role saved successfully');
-=======
+
     const snapshot = await getDoc(userRef);
 
     if (snapshot.exists()) {
@@ -421,7 +416,6 @@ async function saveUserRole(uid: string, role: UserRole, name?: string, photoURL
 
       console.log('User role saved successfully');
     }
->>>>>>> f436dee2145d0f9cf43231c3354d45f581522a8e
   } catch (error) {
     console.error('Error saving user role to Firestore:', error);
     throw error;
