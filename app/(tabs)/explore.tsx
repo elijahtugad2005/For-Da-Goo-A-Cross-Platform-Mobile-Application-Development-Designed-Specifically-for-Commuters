@@ -79,13 +79,12 @@ export default function ExploreScreen() {
   ).current;
 
   const handleTrackLocation = () => {
-    // If they haven't agreed yet, don't start tracking—show the modal instead!
+    // If they haven't agreed yet, show the modal first
     if (!hasAgreed) {
       setShowAgreementModal(true);
       return;
     }
 
-    // If they HAVE agreed, proceed with your existing sharing logic
     if (isSharing) {
       stopSharing();
       Alert.alert('ForDaGoo', 'Tracking stopped.');
@@ -184,11 +183,12 @@ export default function ExploreScreen() {
         </ThemedText>
 
         <View style={styles.sheetContent}>
-          {user?.role === 'driver' && (
-            <ThemedText style={styles.driverInfo}>
-              Share your location to help students track the bus in real-time
-            </ThemedText>
-          )}
+          <ThemedText style={styles.driverInfo}>
+            {user?.role === 'driver' 
+              ? 'Share your location to help students track the bus in real-time'
+              : 'Share your location so drivers and others can see where you are'
+            }
+          </ThemedText>
           
           <TouchableOpacity 
             style={[styles.mainButton, isSharing && styles.buttonActive]}
@@ -198,7 +198,7 @@ export default function ExploreScreen() {
             <ThemedText style={styles.buttonText}>
               {isSharing 
                 ? (user?.role === 'driver' ? 'STOP DRIVING' : 'STOP SHARING')
-                : (user?.role === 'driver' ? 'START DRIVING' : 'START MY LOCATION')
+                : (user?.role === 'driver' ? 'START DRIVING' : 'SHARE MY LOCATION')
               }
             </ThemedText>
           </TouchableOpacity>
@@ -207,8 +207,8 @@ export default function ExploreScreen() {
             <ThemedText style={styles.statusLabel}>Status:</ThemedText>
             <ThemedText style={isSharing ? styles.statusActive : styles.statusInactive}>
               {isSharing 
-                ? (user?.role === 'driver' ? " ● Driving" : " ● Live Tracking")
-                : " ○ Offline"
+                ? (user?.role === 'driver' ? ' ● Driving' : ' ● Live Sharing')
+                : ' ○ Offline'
               }
             </ThemedText>
           </View>
